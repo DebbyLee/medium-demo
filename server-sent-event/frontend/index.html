@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Live Event Feed</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #f4f4f9;
+        }
+        #connection-status {
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #666;
+        }
+        .connected { color: green; }
+        .disconnected { color: red; }
+        
+        #feed {
+            max-width: 600px;
+            height: 400px;
+            overflow-y: auto;
+            border: 1px solid #ccc;
+            background: white;
+            padding: 10px;
+            border-radius: 5px;
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .event-item {
+            padding: 8px 12px;
+            border-bottom: 1px solid #eee;
+            animation: fadeIn 0.3s ease-in;
+        }
+        .event-item:last-child {
+            border-bottom: none;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+
+    <h2>Live Update Stream</h2>
+    <div id="connection-status">Connecting to stream...</div>
+    <div id="feed"></div>
+
+    <script>
+        const statusDiv = document.getElementById('connection-status');
+        const feedDiv = document.getElementById('feed');
+
+        // 1. Establish the SSE connection
+        const eventSource = new EventSource('http://localhost:3000/events');
+
+        // 2. Handle successful connection
+        eventSource.onopen = function() {
+            statusDiv.textContent = 'Status: Live stream connected';
+            statusDiv.className = 'connected';
+        };
+
+        // 3. Listen for events and append them to the browser window
+        eventSource.onmessage = function(event) {
+            // Create a new container element for the event text
+            const newElement = document.createElement('div');
+            newElement.className = 'event-item';
+
+            try {
+                // Parse the data if it is a JSON string
+                const parsedData = JSON.parse(event.data);
+                newElement.textContent = `[${parsedData.time}] Server Update: Status is ${parsedData.status}`;
+            } catch (e) {
+                // Fallback for plaintext system messages
+                newElement.textContent = event.data;
+            }
+
+            // Append the new element into our feed container
+            feedDiv.appendChild(newElement);
+
+            // Auto-scroll the feed to the bottom so the newest items are always visible
+            feedDiv.scrollTop = feedDiv.scrollHeight;
+        };
+
+        // 4. Handle stream connection drops or backend failures
+        eventSource.onerror = function(error) {
+            statusDiv.textContent = 'Status: Disconnected. Attempting retry...';
+            statusDiv.className = 'disconnected';
+        };
+    </script>
+</body>
+</html>
